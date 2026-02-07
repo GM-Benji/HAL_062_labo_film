@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "can.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -96,6 +97,7 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_TIM2_Init();
+  MX_CAN_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
@@ -130,7 +132,7 @@ int main(void)
   {
 	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 6300);
 	  AX12_SetGoalPosition(0xFE, pos);
-	  Motor_SetSpeed(&Motor3, DIR_CCW, duty1);
+	  Motor_SetSpeed(&Motor2, DIR_CCW, duty1);
 	  HAL_Delay(1000);
 	  // 3. Ruch testowy
 	        /*AX12_SetGoalPosition(0xFE, pos);
