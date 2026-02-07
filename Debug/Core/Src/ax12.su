@@ -1,0 +1,9 @@
+../Core/Src/ax12.c:6:9:AX12_CalculateChecksum	24	static
+../Core/Src/ax12.c:14:6:AX12_SendPacket	64	static
+../Core/Src/ax12.c:41:6:AX12_SetGoalPosition	24	static
+../Core/Src/ax12.c:52:6:AX12_SetLED	24	static
+../Core/Src/ax12.c:60:9:AX12_Ping	32	static
+../Core/Src/ax12.c:95:6:AX12_ScanBus	16	static
+../Core/Src/ax12.c:113:6:AX12_SetMode_Wheel	24	static
+../Core/Src/ax12.c:129:6:AX12_Wheel_Move	24	static
+../Core/Src/ax12.c:152:6:AX12_SetMode_Joint	24	static
