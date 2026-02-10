@@ -39,7 +39,7 @@
 #define ID1 0x1e
 #define ID2 0x13
 uint16_t pos = 0;
-uint16_t duty1 = 50;
+uint16_t duty1 = 0;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -128,14 +128,21 @@ int main(void)
 
   HAL_Delay(100);
   AX12_Wheel_Move(0xFE, 100);
+  HAL_GPIO_WritePin(GPIOC, zawor1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor2_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor3_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor4_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor5_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor6_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor7_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, zawor8_Pin, GPIO_PIN_SET);
   while (1)
   {
 	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 6300);
-	  AX12_SetGoalPosition(0xFE, pos);
-	  Motor_SetSpeed(&Motor2, DIR_CCW, duty1);
-	  HAL_Delay(1000);
-	  // 3. Ruch testowy
-	        /*AX12_SetGoalPosition(0xFE, pos);
+	  //AX12_SetGoalPosition(0xFE, pos);
+	  //Motor_SetSpeed(&Motor2, DIR_CCW, duty1);	  HAL_Delay(1000);
+	/*  // 3. Ruch testowy
+	        AX12_SetGoalPosition(0xFE, pos);
 
 	        pos += 200;
 	        if (pos > 1000) pos = 0;

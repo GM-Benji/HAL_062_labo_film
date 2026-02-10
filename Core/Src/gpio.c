@@ -50,7 +50,9 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(M1_D1_GPIO_Port, M1_D1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, M1_D1_Pin|zawor1_Pin|zawor2_Pin|zawor3_Pin
+                          |zawor4_Pin|zawor5_Pin|zawor6_Pin|zawor7_Pin
+                          |zawor8_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(M1_E2_GPIO_Port, M1_E2_Pin, GPIO_PIN_SET);
@@ -61,8 +63,12 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, M3_D1_Pin|M3_E2_Pin|M2_E2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : M1_D1_Pin M1_E2_Pin */
-  GPIO_InitStruct.Pin = M1_D1_Pin|M1_E2_Pin;
+  /*Configure GPIO pins : M1_D1_Pin M1_E2_Pin zawor1_Pin zawor2_Pin
+                           zawor3_Pin zawor4_Pin zawor5_Pin zawor6_Pin
+                           zawor7_Pin zawor8_Pin */
+  GPIO_InitStruct.Pin = M1_D1_Pin|M1_E2_Pin|zawor1_Pin|zawor2_Pin
+                          |zawor3_Pin|zawor4_Pin|zawor5_Pin|zawor6_Pin
+                          |zawor7_Pin|zawor8_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -82,8 +88,36 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : krancowka1_Pin krancowka2_Pin */
+  GPIO_InitStruct.Pin = krancowka1_Pin|krancowka2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 2 */
-
+#include "MC34931.h"
+extern uint8_t current_limit;
+extern uint8_t up_limit;
+extern uint8_t down_limit;
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == krancowka1_Pin)
+    {
+    	Motor_SetSpeed(&Motor3, DIR_CW, 0);
+    	up_limit = 1;
+    	current_limit = 0;
+    }
+    if (GPIO_Pin == krancowka2_Pin)
+    {
+       Motor_SetSpeed(&Motor3, DIR_CW, 0);
+       down_limit = 1;
+       current_limit = 0;
+    }
+}
 /* USER CODE END 2 */
