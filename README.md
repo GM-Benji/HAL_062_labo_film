@@ -1,77 +1,93 @@
-## Protokół Sterowania CAN
+# Dokumentacja Protokołu Sterowania CAN
 
-Urządzenie nasłuchuje na ramki CAN ze standardowym identyfikatorem (StdId). Poniżej znajduje się opis struktury ramki sterującej.
+System sterowania oparty jest na magistrali CAN. Urządzenie nasłuchuje na dwa identyfikatory (Standard ID):
+1. **0x096** (Główna ramka sterująca: Serwo 1, Silniki DC, Wiertło)
+2. **0x097** (Ramka pomocnicza: Serwo 2)
 
-### Parametry Transmisji
-| Parametr | Wartość |
-| :--- | :--- |
-| **CAN ID** | `0x096` (Hex) / `150` (Dec) |
-| **DLC** | 8 bajtów (używane bajty 0-6) |
+## Parametry Magistrali
+* **Baudrate:** 500 kbps (zależnie od prescalera)
+* **Format:** Standard Frame (11-bit ID)
+* **DLC:** 8 bajtów
 
-### Mapa Ramki (Data Frame)
+---
 
-Ramka podzielona jest na trzy sekcje sterujące różnymi podzespołami:
+## 1. Ramka Główna (ID: 0x096)
+Obsługuje pierwsze ramię (Serwo 1), silniki pomocnicze (Mieszadło/Posuw) oraz główne wrzeciono wiertła.
 
-| Bajt (Index) | Funkcja | Opis |
+| Bajt | Funkcja | Zakres / Opis |
 | :---: | :--- | :--- |
-| **0** | **Tryb Serwa (AX12)** | `1` = Prawo (+), `2` = Lewo (-), Inne = Brak zmiany |
-| **1** | **Pozycja MSB** | Starszy bajt zmiany pozycji (delta) |
-| **2** | **Pozycja LSB** | Młodszy bajt zmiany pozycji (delta) |
-| **3** | **Tryb Silników DC** | Wybór silnika i kierunku (Mieszadło/Wiertło) |
-| **4** | **Prędkość DC** | PWM dla silników DC (0-255) |
-| **5** | **Tryb Wiertła (ESC)** | Sterowanie obrotami wiertła (BLDC/ESC) |
-| **6** | **Prędkość Wiertła** | Moc obrotów wiertła (0-255) |
-| **7** | *Nieużywany* | - |
+| **0** | **Tryb Serwa 1** | `1` = Prawo (+), `2` = Lewo (-), `0` = Brak zmian |
+| **1** | **Pozycja S1 (MSB)** | Starszy bajt wartości zmiany pozycji (Delta) |
+| **2** | **Pozycja S1 (LSB)** | Młodszy bajt wartości zmiany pozycji (Delta) |
+| **3** | **Tryb Silników DC** | Wybór silnika i kierunku (patrz sekcja *Silniki DC*) |
+| **4** | **Prędkość DC** | PWM dla silnika DC (`0` - `255`) |
+| **5** | **Tryb Wiertła** | `0` = Stop, `1` = Prawo (CW), `2` = Lewo (CCW) |
+| **6** | **Prędkość Wiertła** | Moc wiertła (`0` - `255`) |
+| **7** | *Rezerwa* | Nieużywany |
+
+### Szczegóły sterowania
+
+#### A. Serwo 1 (Dynamixel ID: 0x1E)
+Wartość w bajtach 1 i 2 określa **zmianę pozycji** (delta), a nie pozycję absolutną.
+* **Wzór:** `Delta = (Bajt[1] << 8) | Bajt[2]`
+* **Ruch:** Aktualna pozycja jest zwiększana lub zmniejszana o `Delta`. Wynik jest limitowany do zakresu 0-1023.
+
+#### B. Silniki DC (Bajty 3 i 4) – Zabezpieczenia
+System posiada flagę **Current Limit**. Tylko jeden silnik DC (Mieszadło lub Posuw) może pracować w danej chwili.
+Aby zmienić kierunek lub silnik, należy najpierw wysłać komendę STOP (`0`), co resetuje blokadę.
+
+| Wartość (Bajt 3) | Akcja | Warunki uruchomienia |
+| :--- | :--- | :--- |
+| **0** | **STOP / RESET** | Zatrzymuje silniki, zeruje flagę `current_limit`. |
+| **1** | **Mieszadło (CCW)** | Wymagany brak blokady (`current_limit == 0`). |
+| **2** | **Mieszadło (CW)** | Wymagany brak blokady (`current_limit == 0`). |
+| **3** | **Posuw Wiertła (CCW)** | Wymagany brak blokady ORAZ nieaktywna krańcówka górna (`!up_limit`). |
+| **4** | **Powrót Wiertła (CW)** | Wymagany brak blokady ORAZ nieaktywna krańcówka dolna (`!down_limit`). |
+
+> **Uwaga:** Krańcówki (`up_limit`, `down_limit`) blokują ruch wiertła w danym kierunku. Ruch w przeciw stronę zeruje flagę odpowiedniej krańcówki.
+
+#### C. Wiertło Główne (Bajty 5 i 6)
+Sterowanie ESC poprzez sygnał PWM.
+* **Stop:** Bajt 5 = `0` (PWM ustawiane na wartość neutralną 4800).
+* **Praca:** Bajt 5 = `1` lub `2`. Prędkość skalowana: `Input(0-255) -> Output(0-1600)`.
 
 ---
 
-### Szczegółowy Opis Bajtów
+## 2. Ramka Pomocnicza (ID: 0x097)
+Obsługuje drugie ramię (Serwo 2). Struktura jest uproszczona.
 
-#### 1. Sterowanie Serwem AX12 (Bajty 0-2)
-Zmienia aktualną pozycję o zadaną wartość (delta). Wynikowa pozycja jest limitowana do zakresu 0-1023.
+| Bajt | Funkcja | Zakres / Opis |
+| :---: | :--- | :--- |
+| **0** | **Tryb Serwa 2** | `1` = Prawo (+), `2` = Lewo (-), `0` = Brak zmian |
+| **1** | **Pozycja S2 (MSB)** | Starszy bajt wartości zmiany pozycji |
+| **2** | **Pozycja S2 (LSB)** | Młodszy bajt wartości zmiany pozycji |
+| **3-7** | *Nieużywane* | - |
 
-* **Bajt 0 (Komenda):**
-    * `0x01`: Zwiększ pozycję (Ruch w prawo).
-    * `0x02`: Zmniejsz pozycję (Ruch w lewo).
-* **Bajty 1 i 2 (Wartość):** 16-bitowa liczba określająca o ile zmienić pozycję.
-    * Wartość = `(Bajt[1] << 8) + Bajt[2]`
-
-#### 2. Sterowanie Silnikami DC (Bajty 3-4)
-Steruje silnikami pomocniczymi (Mieszadło - Motor2, Posuw Wiertła - Motor3).
-
-* **Bajt 3 (Tryb):**
-    * `0`: **STOP** (Zatrzymuje Motor2 i Motor3).
-    * `1`: Mieszadło (Motor2) w lewo (CCW).
-    * `2`: Mieszadło (Motor2) w prawo (CW).
-    * `3`: Posuw wiertła (Motor3) w lewo (CCW).
-    * `4`: Posuw wiertła (Motor2*) w prawo (CW).
-* **Bajt 4 (Prędkość):** Wartość PWM (0-255).
-
-*\*Uwaga: W kodzie dla trybu 4 sterowany jest Motor2, mimo że logicznie (jako powrót wiertła) sugerowany byłby Motor3.*
-
-#### 3. Sterowanie Wiertłem Głównym / ESC (Bajty 5-6)
-Steruje sygnałem PWM dla regulatora ESC (Timer 4 Channel 2).
-
-* **Bajt 5 (Kierunek):**
-    * `0`: **STOP** (Neutral, PWM = 4800).
-    * `1`: Obroty Normalne (PWM = 4800 + Speed).
-    * `2`: Obroty Wsteczne (PWM = 4800 - Speed).
-* **Bajt 6 (Moc):** Wartość wejściowa 0-255, skalowana do zakresu timera (0-1600).
+#### Serwo 2 (Dynamixel ID: 0x01)
+Działa analogicznie do Serwa 1. Steruje pozycją absolutną poprzez dodawanie/odejmowanie wartości delta.
 
 ---
 
-### Przykładowe Ramki
+## Przykłady Ramek (Hex)
 
-**Przykład 1: Wszystko STOP**
-Zatrzymuje silniki DC i wiertło.
-`ID: 0x96` -> `[ 00, 00, 00, 00, 00, 00, 00, 00 ]`
+### 1. Start Mieszadła (10% mocy)
+Należy ustawić Bajt 3 na `1` (Mieszadło) i Bajt 4 na `25` (Moc). Serwa i Wiertło wyłączone.
+* **ID:** `0x096`
+* **Data:** `00 00 00 01 80 00 00 00`
 
-**Przykład 2: Ruch serwa i włączenie mieszadła**
-Serwo w prawo o 50 jednostek, Mieszadło CCW z pełną mocą.
-* Serwo: Tryb 1, Val 50 -> Hex: `00 32`
-* DC: Tryb 1, Speed 255 -> Hex: `FF`
-`ID: 0x96` -> `[ 01, 00, 32, 01, FF, 00, 00, 00 ]`
+### 2. Zatrzymanie Mieszadła (Wymagane przed zmianą na Wiertło)
+Wysłanie zera w Bajcie 3 resetuje flagę `current_limit`.
+* **ID:** `0x096`
+* **Data:** `00 00 00 00 00 00 00 00`
 
-**Przykład 3: Wiertło na 50% mocy**
-Serwo bez zmian, DC stop, Wiertło tryb 1, moc ok. 128.
-`ID: 0x96` -> `[ 00, 00, 00, 00, 00, 01, 80, 00 ]`
+### 3. Ruch Wiertła (Posuw) + Włączenie Wiertła
+Posuw w dół (Tryb 3) z pełną mocą (255), Wiertło kręci się w prawo (Tryb 1) z połową mocy (128).
+* **ID:** `0x096`
+* **Data:** `00 00 00 03 FF 01 80 00`
+
+### 4. Ruch obu serw
+Wymaga wysłania dwóch ramek jedna po drugiej.
+* **Ruch Serwa 1 (Prawo o 100):**
+  ID: `0x096` -> `01 00 64 00 00 00 00 00`
+* **Ruch Serwa 2 (Lewo o 50):**
+  ID: `0x097` -> `02 00 32 00 00 00 00 00`
